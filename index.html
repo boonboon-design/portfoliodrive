@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>PORTFOLIO DRIVE</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; background: #111; overflow: hidden; }
+#c { position: absolute; top: 0; left: 0; display: block; cursor: crosshair; }
+
+.ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Press Start 2P', monospace; }
+
+/* ── HEADER ── */
+.hdr {
+  position: absolute; top: 20px; left: 20px;
+  background: rgba(0,0,0,0.78);
+  border: 2px solid rgba(255,255,255,0.12);
+  padding: 13px 20px; backdrop-filter: blur(12px);
+}
+.hdr h1 { font-size: 13px; color: #fff; letter-spacing: 2px; line-height: 1; }
+.hdr p  { font-size: 6.5px; color: rgba(255,255,255,0.4); margin-top: 8px; letter-spacing: .5px; }
+
+/* ── POPUP ── */
+.popup {
+  position: absolute; bottom: 88px; left: 50%;
+  transform: translateX(-50%) translateY(14px);
+  background: rgba(4,4,10,0.94);
+  padding: 24px 34px; min-width: 280px; text-align: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .22s cubic-bezier(.4,0,.2,1), transform .22s cubic-bezier(.4,0,.2,1);
+  backdrop-filter: blur(16px);
+  border: 3px solid rgba(255,255,255,.08);
+}
+.popup.on {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: all;
+}
+.popup .ico  { font-size: 40px; margin-bottom: 9px; line-height: 1; }
+.popup .nm   { font-size: 12px; color: #fff; margin-bottom: 5px; letter-spacing: 1px; }
+.popup .url  { font-size: 7px; color: rgba(255,255,255,.4); margin-bottom: 18px; }
+.popup .btn  {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px; border: none; padding: 12px 26px;
+  cursor: pointer; pointer-events: all; color: #000;
+  transition: transform .1s, filter .12s;
+  letter-spacing: 1px;
+}
+.popup .btn:hover  { transform: scale(1.05); filter: brightness(1.15); }
+.popup .btn:active { transform: scale(0.96); }
+.popup .hint { font-size: 6px; color: rgba(255,255,255,.28); margin-top: 11px; }
+
+/* ── MINIMAP ── */
+.mm {
+  position: absolute; top: 20px; right: 20px;
+  border: 2px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(6px);
+}
+.mm canvas { display: block; }
+.mm p { font-size: 5.5px; color: rgba(255,255,255,.3); text-align: center; padding: 3px 0; }
+
+/* ── DEATH SCREEN ── */
+#death-screen {
+  display: none;
+  position: fixed; inset: 0;
+  align-items: center; justify-content: center;
+  flex-direction: column;
+  background: rgba(0,0,0,0.72);
+  z-index: 100;
+  animation: deathfade 0.3s ease;
+}
+@keyframes deathfade { from { opacity:0; } to { opacity:1; } }
+#death-screen .skull  { font-size: 72px; margin-bottom: 18px; animation: skullpop 0.4s cubic-bezier(.4,0,.2,1); }
+#death-screen .title  { font-family:'Press Start 2P',monospace; font-size: 28px; color:#FF2222; letter-spacing:4px; text-shadow: 0 0 30px #ff2222, 0 0 60px #ff000088; margin-bottom:16px; animation: skullpop 0.35s cubic-bezier(.4,0,.2,1); }
+#death-screen .sub    { font-family:'Press Start 2P',monospace; font-size: 8px; color:rgba(255,255,255,0.45); letter-spacing:2px; }
+@keyframes skullpop { 0%{transform:scale(0.4);opacity:0;} 70%{transform:scale(1.12);} 100%{transform:scale(1);opacity:1;} }
+
+
+.spd {
+  position: absolute; bottom: 22px; left: 22px;
+  font-size: 7px; color: rgba(255,255,255,.35);
+}
+
+/* ── STATS BOX ── */
+.stats {
+  position: absolute; bottom: 22px; right: 22px;
+  background: rgba(0,0,0,0.82);
+  border: 2px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(12px);
+  padding: 14px 18px;
+  min-width: 170px;
+}
+.stats-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; margin-bottom: 10px;
+}
+.stats-row:last-child { margin-bottom: 0; }
+.stats-label {
+  font-size: 6px; color: rgba(255,255,255,0.4); letter-spacing: 0.5px;
+}
+.stats-val {
+  font-size: 16px; letter-spacing: 1px;
+  transition: transform 0.12s, color 0.18s;
+}
+.stats-val.bump { color: #FFD166; }
+.stats-val.explode { color: #FF6B6B; }
+.stats-val.pop {
+  animation: statpop 0.22s cubic-bezier(.4,0,.2,1);
+}
+@keyframes statpop {
+  0%   { transform: scale(1.7); }
+  100% { transform: scale(1); }
+}
+.stats-icon { font-size: 16px; margin-right: 8px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="death-screen">
+  <div class="skull">💀</div>
+  <div class="title">YOU DIED</div>
+  <div class="sub">RESPAWNING...</div>
+</div>
+
+<div class="ui">
+  <div class="hdr">
+    <h1>PORTFOLIO.DRIVE</h1>
+    <p>DRIVE INTO A BUILDING TO VISIT THE SITE</p>
+  </div>
+
+  <div class="popup" id="popup">
+    <div class="ico" id="pi">🚀</div>
+    <div class="nm"  id="pn">SITE NAME</div>
+    <div class="url" id="pu">url.com</div>
+    <button class="btn" id="pb">VISIT SITE →</button>
+    <div class="hint">ENTER · SPACE · OR CLICK ABOVE</div>
+  </div>
+
+  <div class="mm">
+    <canvas id="mm" width="164" height="124"></canvas>
+    <p>MAP</p>
+  </div>
+
+  <div class="stats">
+    <div class="stats-row">
+      <div><span class="stats-icon">🔥</span><span class="stats-label">EXPLODED</span></div>
+      <div class="stats-val explode" id="stat-exp">0</div>
+    </div>
+  </div>
+  <div class="spd">SPD <span id="spd">0.0</span></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   ░░  EDIT YOUR SITES HERE  ░░
+   ═══════════════════════════════════════════════════ */
+const SITES = [
+  { label:'SITE ONE',   url:'https://yoursite1.com', icon:'🎨', color:'#FF6B6B', sub:'yoursite1.com'   },
+  { label:'SITE TWO',   url:'https://yoursite2.com', icon:'💻', color:'#4ECDC4', sub:'yoursite2.com'   },
+  { label:'SITE THREE', url:'https://yoursite3.com', icon:'⚡', color:'#FFD166', sub:'yoursite3.com'   },
+  { label:'SITE FOUR',  url:'https://yoursite4.com', icon:'🌊', color:'#06D6A0', sub:'yoursite4.com'   },
+  { label:'SITE FIVE',  url:'https://yoursite5.com', icon:'🔮', color:'#B388FF', sub:'yoursite5.com'   },
+  { label:'SITE SIX',   url:'https://yoursite6.com', icon:'🔥', color:'#FF9A3C', sub:'yoursite6.com'   },
+];
+
+/* ═══════════════════════════════════════════════════
+   ░░  WORLD  ░░
+   ═══════════════════════════════════════════════════ */
+const WW = 3000, WH = 2200, TILE = 80;
+
+const H_ROADS = [
+  { y:500,  h:100 },
+  { y:1100, h:100 },
+  { y:1700, h:100 },
+];
+const V_ROADS = [
+  { x:500,  w:100 },
+  { x:1100, w:100 },
+  { x:1700, w:100 },
+  { x:2300, w:100 },
+];
+
+const ZW = 280, ZH = 200;
+const ZONES = [
+  { ...SITES[0], x:110,  y:100,  w:ZW, h:ZH },
+  { ...SITES[1], x:760,  y:100,  w:ZW, h:ZH },
+  { ...SITES[2], x:1350, y:100,  w:ZW, h:ZH },
+  { ...SITES[3], x:110,  y:740,  w:ZW, h:ZH },
+  { ...SITES[4], x:760,  y:1360, w:ZW, h:ZH },
+  { ...SITES[5], x:1350, y:740,  w:ZW, h:ZH },
+];
+
+/* ═══════════════════════════════════════════════════
+   ░░  CANVAS  ░░
+   ═══════════════════════════════════════════════════ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let CW, CH;
+function resize() { CW = canvas.width = innerWidth; CH = canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+const mmC   = document.getElementById('mm');
+const mmCtx = mmC.getContext('2d');
+
+/* ═══════════════════════════════════════════════════
+   ░░  STATS  ░░
+   ═══════════════════════════════════════════════════ */
+let statExp = 0;
+function bumpStat(id, val) {
+  const el = document.getElementById(id);
+  el.textContent = val;
+  el.classList.remove('pop');
+  void el.offsetWidth; // reflow to restart animation
+  el.classList.add('pop');
+}
+
+/* ═══════════════════════════════════════════════════
+   ░░  CAR  ░░
+   ═══════════════════════════════════════════════════ */
+const car = {
+  x: 1150, y: 1150,
+  angle: -Math.PI / 2,
+  speed: 0,
+  maxSpeed: 12,
+  accel:    0.26,
+  friction: 0.88,
+  brake:    0.46,
+  turn:     0.064,
+  w: 24, h: 40,
+  vx: 0, vy: 0,           // impulse velocity from collisions
+  targetX: null, targetY: null,
+  body:   '#E84949',
+  cabin:  '#B03030',
+};
+
+/* ═══════════════════════════════════════════════════
+   ░░  CAMERA  ░░
+   ═══════════════════════════════════════════════════ */
+const cam = { x: 0, y: 0 };
+
+/* ═══════════════════════════════════════════════════
+   ░░  INPUT  ░░
+   ═══════════════════════════════════════════════════ */
+const K = new Set();
+
+addEventListener('keydown', e => {
+  K.add(e.code);
+  if (e.code === 'Enter' || e.code === 'Space') visitSite();
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD'].includes(e.code))
+    car.targetX = car.targetY = null;
+});
+addEventListener('keyup', e => K.delete(e.code));
+
+canvas.addEventListener('click', e => {
+  car.targetX = e.clientX + cam.x;
+  car.targetY = e.clientY + cam.y;
+});
+
+let t0 = null;
+let swipe = { active: false, angle: 0, mag: 0 };
+
+canvas.addEventListener('touchstart', e => {
+  t0 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  swipe.active = false;
+  car.targetX = car.targetY = null;
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  if (!t0) return;
+  const dx = e.touches[0].clientX - t0.x;
+  const dy = e.touches[0].clientY - t0.y;
+  const mag = Math.hypot(dx, dy);
+  if (mag > 8) {
+    swipe.active = true;
+    swipe.angle  = Math.atan2(dy, dx);
+    swipe.mag    = Math.min(mag, 80);
+  }
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  swipe.active = false;
+  t0 = null;
+  e.preventDefault();
+}, { passive: false });
+
+/* ═══════════════════════════════════════════════════
+   ░░  ZONE UI  ░░
+   ═══════════════════════════════════════════════════ */
+let activeZone = null;
+const popup = document.getElementById('popup');
+
+function visitSite() { if (activeZone) window.open(activeZone.url, '_blank'); }
+document.getElementById('pb').addEventListener('click', visitSite);
+
+function setPopup(z) {
+  if (z) {
+    document.getElementById('pi').textContent = z.icon;
+    document.getElementById('pn').textContent = z.label;
+    document.getElementById('pu').textContent = z.sub;
+    document.getElementById('pn').style.color = z.color;
+    document.getElementById('pb').style.background = z.color;
+    popup.style.borderColor = z.color;
+    popup.classList.add('on');
+  } else {
+    popup.classList.remove('on');
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   ░░  PARTICLES  ░░
+   ═══════════════════════════════════════════════════ */
+const parts = [];
+function spawnSmoke(x, y, ang, spd) {
+  for (let i = 0; i < 2; i++) {
+    const sp = (Math.random() - .5) * .85;
+    parts.push({
+      x, y,
+      vx: Math.cos(ang + Math.PI + sp) * spd * .22,
+      vy: Math.sin(ang + Math.PI + sp) * spd * .22,
+      r: Math.random() * 4 + 2, life: 1,
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   ░░  TREES  ░░
+   ═══════════════════════════════════════════════════ */
+const TREES = [];
+(function() {
+  for (let i = 0; i < 270; i++) {
+    const x = Math.random() * WW;
+    const y = Math.random() * WH;
+    let ok = true;
+    for (const r of H_ROADS) if (y > r.y-45 && y < r.y+r.h+45) ok = false;
+    for (const r of V_ROADS) if (x > r.x-45 && x < r.x+r.w+45) ok = false;
+    for (const z of ZONES)   if (x > z.x-35 && x < z.x+z.w+35 && y > z.y-35 && y < z.y+z.h+35) ok = false;
+    if (ok) TREES.push({
+      x, y, r: Math.random()*15+14,
+      ph: Math.random()*Math.PI*2,
+      d: `hsl(${115+Math.random()*22},${38+Math.random()*14}%,${22+Math.random()*8}%)`,
+      m: `hsl(${115+Math.random()*22},${44+Math.random()*14}%,${30+Math.random()*8}%)`,
+    });
+  }
+})();
+
+/* ═══════════════════════════════════════════════════
+   ░░  ROAD MARKINGS  ░░
+   ═══════════════════════════════════════════════════ */
+// Pre-compute intersection stop boxes
+const STOP_BOXES = [];
+for (const h of H_ROADS) for (const v of V_ROADS)
+  STOP_BOXES.push({ x: v.x, y: h.y, w: v.w, h: h.h });
+
+/* ═══════════════════════════════════════════════════
+   ░░  TRAFFIC LIGHTS  ░░
+   ═══════════════════════════════════════════════════ */
+const TL_GREEN  = 5.0;
+const TL_YELLOW = 0.9;
+const TL_CYCLE  = (TL_GREEN + TL_YELLOW) * 2;
+
+// One entry per intersection, timer offset to desync them
+const TRAFFIC_LIGHTS = [];
+for (let hi = 0; hi < H_ROADS.length; hi++)
+  for (let vi = 0; vi < V_ROADS.length; vi++)
+    TRAFFIC_LIGHTS.push({
+      hi, vi,
+      t: ((hi * V_ROADS.length + vi) / (H_ROADS.length * V_ROADS.length)) * TL_CYCLE,
+    });
+
+function tlState(tl) {
+  const t = tl.t % TL_CYCLE;
+  if      (t < TL_GREEN)                     return { h:'green',  v:'red'    };
+  else if (t < TL_GREEN + TL_YELLOW)          return { h:'yellow', v:'red'    };
+  else if (t < TL_GREEN * 2 + TL_YELLOW)      return { h:'red',    v:'green'  };
+  else                                         return { h:'red',    v:'yellow' };
+}
+function getTL(hi, vi) { return TRAFFIC_LIGHTS[hi * V_ROADS.length + vi]; }
+function isRedH(hi, vi) { const s = tlState(getTL(hi, vi)); return s.h !== 'green'; }
+function isRedV(hi, vi) { const s = tlState(getTL(hi, vi)); return s.v !== 'green'; }
+
+/* ═══════════════════════════════════════════════════
+   ░░  WAYPOINT GRAPH  ░░
+   ═══════════════════════════════════════════════════ */
+const WP = [];
+const WP_CONN = [];
+
+// Intersection nodes: index = hi * V_ROADS.length + vi
+for (let hi = 0; hi < H_ROADS.length; hi++)
+  for (let vi = 0; vi < V_ROADS.length; vi++) {
+    WP.push({ x: V_ROADS[vi].x + V_ROADS[vi].w/2,
+               y: H_ROADS[hi].y + H_ROADS[hi].h/2,
+               isIntersection: true, isEnd: false, hi, vi });
+    WP_CONN.push([]);
+  }
+
+// H-road edge nodes
+const H_END_BASE = WP.length;
+for (let hi = 0; hi < H_ROADS.length; hi++) {
+  const cy = H_ROADS[hi].y + H_ROADS[hi].h / 2;
+  WP.push({ x: -100, y: cy,      isIntersection: false, isEnd: true });
+  WP.push({ x: WW+100, y: cy,    isIntersection: false, isEnd: true });
+  WP_CONN.push([], []);
+}
+
+// V-road edge nodes
+const V_END_BASE = WP.length;
+for (let vi = 0; vi < V_ROADS.length; vi++) {
+  const cx = V_ROADS[vi].x + V_ROADS[vi].w / 2;
+  WP.push({ x: cx, y: -100,      isIntersection: false, isEnd: true });
+  WP.push({ x: cx, y: WH+100,    isIntersection: false, isEnd: true });
+  WP_CONN.push([], []);
+}
+
+// Connect H roads: leftEdge – int(hi,0) – … – int(hi,nV-1) – rightEdge
+for (let hi = 0; hi < H_ROADS.length; hi++) {
+  const chain = [ H_END_BASE + hi*2,
+    ...Array.from({length: V_ROADS.length}, (_, vi) => hi * V_ROADS.length + vi),
+    H_END_BASE + hi*2 + 1 ];
+  for (let i = 0; i < chain.length - 1; i++) {
+    WP_CONN[chain[i]].push(chain[i+1]);
+    WP_CONN[chain[i+1]].push(chain[i]);
+  }
+}
+
+// Connect V roads: topEdge – int(0,vi) – … – int(nH-1,vi) – bottomEdge
+for (let vi = 0; vi < V_ROADS.length; vi++) {
+  const chain = [ V_END_BASE + vi*2,
+    ...Array.from({length: H_ROADS.length}, (_, hi) => hi * V_ROADS.length + vi),
+    V_END_BASE + vi*2 + 1 ];
+  for (let i = 0; i < chain.length - 1; i++) {
+    WP_CONN[chain[i]].push(chain[i+1]);
+    WP_CONN[chain[i+1]].push(chain[i]);
+  }
+}
+
+// Opposite-edge map for wrap-around teleport
+const OPPOSITE_END = {};
+for (let hi = 0; hi < H_ROADS.length; hi++) {
+  OPPOSITE_END[H_END_BASE + hi*2]     = H_END_BASE + hi*2 + 1;
+  OPPOSITE_END[H_END_BASE + hi*2 + 1] = H_END_BASE + hi*2;
+}
+for (let vi = 0; vi < V_ROADS.length; vi++) {
+  OPPOSITE_END[V_END_BASE + vi*2]     = V_END_BASE + vi*2 + 1;
+  OPPOSITE_END[V_END_BASE + vi*2 + 1] = V_END_BASE + vi*2;
+}
+
+function pickNextWP(curIdx, prevIdx) {
+  const all    = WP_CONN[curIdx].filter(i => i !== prevIdx);
+  const nonEnd = all.filter(i => !WP[i].isEnd);
+  const pool   = nonEnd.length > 0 ? nonEnd : all;
+  return pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : curIdx;
+}
+
+/* ═══════════════════════════════════════════════════
+   ░░  AI CARS  ░══════════════════════════════════════
+   ═══════════════════════════════════════════════════ */
+const AI_PALETTES = [
+  ['#4A90D9','#2E6099'], ['#50C878','#2D7A44'], ['#FFD700','#B89700'],
+  ['#FF8C00','#C45F00'], ['#9B59B6','#6C3483'], ['#D0D0D0','#888888'],
+  ['#F39C12','#9A6100'], ['#1ABC9C','#0E6B57'], ['#E74C3C','#9B2020'],
+  ['#3498DB','#1A5276'], ['#2ECC71','#1A7A43'], ['#F1C40F','#9A7D0A'],
+];
+const AI_CARS = [];
+let _pi = 0;
+
+function spawnAI(fromWP, toWP) {
+  const [body, cabin] = AI_PALETTES[_pi++ % AI_PALETTES.length];
+  const t = 0.1 + Math.random() * 0.8;
+  const x = WP[fromWP].x + (WP[toWP].x - WP[fromWP].x) * t;
+  const y = WP[fromWP].y + (WP[toWP].y - WP[fromWP].y) * t;
+  const angle = Math.atan2(WP[toWP].y - WP[fromWP].y, WP[toWP].x - WP[fromWP].x);
+  // 22px lane offset to the LEFT of travel direction (left-hand traffic)
+  const lx = x - Math.sin(angle) * 22;
+  const ly = y + Math.cos(angle) * 22;
+  AI_CARS.push({
+    x: lx, y: ly, angle,
+    speed: 1.6 + Math.random() * 1.2,
+    maxSpeed: 2.2 + Math.random() * 1.2,
+    vx: 0, vy: 0,
+    bumpedTimer: 0,
+    targetWP: toWP,
+    prevWP:   fromWP,
+    w: 20, h: 34, body, cabin,
+  });
+}
+
+// Sparse spawning — roughly one car per every other segment
+for (let hi = 0; hi < H_ROADS.length; hi++) {
+  const chain = [ H_END_BASE + hi*2,
+    ...Array.from({length: V_ROADS.length}, (_, vi) => hi * V_ROADS.length + vi),
+    H_END_BASE + hi*2 + 1 ];
+  for (let s = 0; s < chain.length - 1; s++) {
+    if (Math.random() < 0.4) spawnAI(chain[s],   chain[s+1]);
+    if (Math.random() < 0.4) spawnAI(chain[s+1], chain[s]);
+  }
+}
+for (let vi = 0; vi < V_ROADS.length; vi++) {
+  const chain = [ V_END_BASE + vi*2,
+    ...Array.from({length: H_ROADS.length}, (_, hi) => hi * V_ROADS.length + vi),
+    V_END_BASE + vi*2 + 1 ];
+  for (let s = 0; s < chain.length - 1; s++) {
+    if (Math.random() < 0.4) spawnAI(chain[s],   chain[s+1]);
+    if (Math.random() < 0.4) spawnAI(chain[s+1], chain[s]);
+  }
+}
+
+function updateAICar(ac, dt) {
+  const tgt  = WP[ac.targetWP];
+  const dx   = tgt.x - ac.x, dy = tgt.y - ac.y;
+  const dist = Math.hypot(dx, dy);
+
+  // ── Traffic light stop ──
+  let shouldStop = false;
+  if (ac.bumpedTimer <= 0 && tgt.isIntersection && dist < 95) {
+    const horizontal = Math.abs(dx) > Math.abs(dy);
+    const red = horizontal ? isRedH(tgt.hi, tgt.vi) : isRedV(tgt.hi, tgt.vi);
+    if (red) {
+      shouldStop = true;
+      if (dist < 5) { ac.speed = 0; }
+    }
+  }
+
+  // ── Overtake detection ──
+  // Road direction vectors
+  const prevWP = WP[ac.prevWP];
+  const rdx = tgt.x - prevWP.x, rdy = tgt.y - prevWP.y;
+  const rlen = Math.hypot(rdx, rdy) || 1;
+  const rnx = rdx / rlen, rny = rdy / rlen;   // forward unit vector
+  const lnx = -rny, lny = rnx;                 // left-normal unit vector
+
+  if (!ac.overtaking) ac.overtaking = false;
+  if (!ac.overtakeTimer) ac.overtakeTimer = 0;
+  ac.overtakeTimer = Math.max(0, ac.overtakeTimer - dt);
+
+  let LANE_OFFSET = 22; // default: left lane
+
+  if (!ac.overtaking && ac.overtakeTimer <= 0 && !shouldStop && ac.bumpedTimer <= 0) {
+    // Look for a slower car directly ahead (within ~90px along road, within 28px laterally)
+    for (const other of AI_CARS) {
+      if (other === ac) continue;
+      const odx = other.x - ac.x, ody = other.y - ac.y;
+      const ahead = odx * rnx + ody * rny;
+      const lateral = odx * lnx + ody * lny;
+      if (ahead > 5 && ahead < 90 && Math.abs(lateral) < 28 && other.speed < ac.maxSpeed * 0.72) {
+        // Don't overtake if the car ahead is stopped at a red light
+        const otherStopped = other.speed < 0.1;
+        const nearRedLight = otherStopped && WP[other.targetWP].isIntersection &&
+          (() => {
+            const otgt = WP[other.targetWP];
+            const ohdx = otgt.x - other.x, ohdy = otgt.y - other.y;
+            const horiz = Math.abs(ohdx) > Math.abs(ohdy);
+            return horiz ? isRedH(otgt.hi, otgt.vi) : isRedV(otgt.hi, otgt.vi);
+          })();
+        if (nearRedLight) break; // sit behind, no overtake
+        // Slower car not at lights — start overtake
+        ac.overtaking = true;
+        ac.overtakeTimer = 2.8 + Math.random() * 1.2;
+        break;
+      }
+    }
+  }
+
+  // While overtaking, target right lane (+22 instead of -22 from centre)
+  // Once timer expires, return to left lane
+  if (ac.overtaking) {
+    LANE_OFFSET = -22; // right lane (overtaking lane)
+    if (ac.overtakeTimer <= 0) {
+      ac.overtaking = false;
+      ac.overtakeTimer = 1.5; // cooldown before can overtake again
+    }
+  }
+
+  // ── Steer toward target + lane keeping ──
+  if (!shouldStop && dist > 4) {
+    const ta = Math.atan2(dy, dx);
+
+    // Project car onto road line to find road-centre point
+    const fromPrev = (ac.x - prevWP.x) * rnx + (ac.y - prevWP.y) * rny;
+    const roadCx = prevWP.x + rnx * fromPrev;
+    const roadCy = prevWP.y + rny * fromPrev;
+    const idealX = roadCx + lnx * LANE_OFFSET;
+    const idealY = roadCy + lny * LANE_OFFSET;
+
+    // Lateral error (signed distance from ideal lane)
+    const latErr = (ac.x - idealX) * lnx + (ac.y - idealY) * lny;
+
+    // Blend waypoint angle with lane-correction angle
+    const laneCorrectAngle = Math.atan2(idealY - ac.y, idealX - ac.x);
+    let wpDiff = ta - ac.angle;
+    while (wpDiff >  Math.PI) wpDiff -= Math.PI * 2;
+    while (wpDiff < -Math.PI) wpDiff += Math.PI * 2;
+
+    // Weight: more lane correction when far from lane, less when close to intersection
+    const nearJunction = tgt.isIntersection && dist < 80;
+    const laneWeight = nearJunction ? 0 : Math.min(1, Math.abs(latErr) / 18) * 0.55;
+
+    let laneAngleDiff = laneCorrectAngle - ac.angle;
+    while (laneAngleDiff >  Math.PI) laneAngleDiff -= Math.PI * 2;
+    while (laneAngleDiff < -Math.PI) laneAngleDiff += Math.PI * 2;
+
+    const blendedDiff = wpDiff * (1 - laneWeight) + laneAngleDiff * laneWeight;
+    const turnRate = nearJunction ? 0.18 : 0.07;
+    ac.angle += Math.sign(blendedDiff) * Math.min(Math.abs(blendedDiff), turnRate);
+  }
+
+  // ── Proactive avoidance ──
+  // Scan a cone ahead for cars and apply steering + braking before impact
+  let avoidBrake = 0;      // 0–1, how hard to brake
+  let avoidSteer = 0;      // negative=steer left, positive=steer right
+  const LOOK_AHEAD = 80;   // how far ahead to scan (px)
+  const LOOK_WIDE  = 30;   // half-width of scan cone (px)
+
+  for (const other of AI_CARS) {
+    if (other === ac) continue;
+    const odx = other.x - ac.x, ody = other.y - ac.y;
+    const fwd  = odx * rnx + ody * rny;   // component ahead
+    const side = odx * lnx + ody * lny;   // component to the left
+    if (fwd <= 0 || fwd > LOOK_AHEAD) continue;
+    if (Math.abs(side) > LOOK_WIDE) continue;
+
+    // Proximity factor: 1 = right on top, 0 = at edge of look-ahead
+    const prox = 1 - fwd / LOOK_AHEAD;
+
+    // Brake harder the closer they are
+    avoidBrake = Math.max(avoidBrake, prox * 0.85);
+
+    // Steer away: if obstacle is left of us steer right (+), else steer left (-)
+    const steerDir = side < 0 ? 1 : -1;
+    if (Math.abs(steerDir * prox) > Math.abs(avoidSteer))
+      avoidSteer = steerDir * prox * 0.12;
+  }
+
+  // Apply avoidance steer (only outside junctions so we don't fight the turn)
+  const nearJunctionNow = tgt.isIntersection && dist < 80;
+  if (!nearJunctionNow && !shouldStop && avoidSteer !== 0) {
+    ac.angle += avoidSteer;
+  }
+
+  // ── Speed ──
+  const overtakeBoost = ac.overtaking ? 1.25 : 1.0;
+  const junctionSlow  = (tgt.isIntersection && dist < 80 && !shouldStop) ? 0.55 : 1.0;
+  const avoidSlow     = 1 - avoidBrake * 0.7;  // avoidBrake=1 → speed capped at 30%
+  ac.speed = (shouldStop || ac.bumpedTimer > 0)
+    ? Math.max(0, ac.speed - 0.18)
+    : Math.min(ac.maxSpeed * overtakeBoost * junctionSlow * avoidSlow, ac.speed + 0.07);
+  if (ac.bumpedTimer > 0) ac.bumpedTimer -= dt;
+
+  // ── Move ──
+  ac.x += Math.cos(ac.angle) * ac.speed + ac.vx;
+  ac.y += Math.sin(ac.angle) * ac.speed + ac.vy;
+  ac.vx *= 0.82; ac.vy *= 0.82;
+
+  // ── Reached waypoint? ──
+  if (dist < (tgt.isEnd ? 50 : 32)) {
+    if (tgt.isEnd) {
+      const oppIdx = OPPOSITE_END[ac.targetWP];
+      const opp    = WP[oppIdx];
+      ac.x = opp.x; ac.y = opp.y;
+      ac.prevWP    = oppIdx;
+      ac.targetWP  = pickNextWP(oppIdx, oppIdx);
+    } else {
+      const prev  = ac.targetWP;
+      ac.targetWP = pickNextWP(ac.targetWP, ac.prevWP);
+      ac.prevWP   = prev;
+    }
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════
+   ░░  COLLISION SYSTEM  ░░
+   ═══════════════════════════════════════════════════ */
+function carRadius(c) { return (c.w + c.h) / 4.2; }
+
+const sparks = [];
+function spawnSparks(x, y, count) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const spd = 1.5 + Math.random() * 4;
+    sparks.push({ x, y, vx: Math.cos(a)*spd, vy: Math.sin(a)*spd, life: 1 });
+  }
+}
+
+// ── Explosions ──
+const explosions = [];
+function spawnExplosion(x, y) {
+  // Fireballs
+  for (let i = 0; i < 28; i++) {
+    const a   = Math.random() * Math.PI * 2;
+    const spd = 1.2 + Math.random() * 5.5;
+    explosions.push({
+      x, y,
+      vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+      r: 6 + Math.random() * 10,
+      life: 1, type: 'fire',
+    });
+  }
+  // Debris chunks
+  for (let i = 0; i < 14; i++) {
+    const a   = Math.random() * Math.PI * 2;
+    const spd = 2 + Math.random() * 6;
+    explosions.push({
+      x, y,
+      vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+      r: 2 + Math.random() * 4,
+      life: 1, type: 'debris',
+    });
+  }
+  // Big smoke puffs
+  for (let i = 0; i < 10; i++) {
+    const a   = Math.random() * Math.PI * 2;
+    const spd = 0.5 + Math.random() * 1.8;
+    explosions.push({
+      x, y,
+      vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+      r: 12 + Math.random() * 18,
+      life: 1, type: 'smoke',
+    });
+  }
+}
+
+function resolveCollision(a, b, aMult, bMult) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const dist = Math.hypot(dx, dy);
+  const minDist = carRadius(a) + carRadius(b);
+  if (dist >= minDist || dist < 0.5) return 0;
+
+  const nx = dx / dist, ny = dy / dist;
+  const overlap = (minDist - dist) / 2;
+  a.x -= nx * overlap * aMult;
+  a.y -= ny * overlap * aMult;
+  b.x += nx * overlap * bMult;
+  b.y += ny * overlap * bMult;
+
+  const avx = Math.cos(a.angle) * a.speed + a.vx;
+  const avy = Math.sin(a.angle) * a.speed + a.vy;
+  const bvx = Math.cos(b.angle) * b.speed + b.vx;
+  const bvy = Math.sin(b.angle) * b.speed + b.vy;
+  const dvn = (avx - bvx) * nx + (avy - bvy) * ny;
+  if (dvn > 0) return 0;
+
+  const imp = -(1 + 0.5) * dvn / 2;
+  a.vx += imp * nx * aMult;
+  a.vy += imp * ny * aMult;
+  b.vx -= imp * nx * bMult;
+  b.vy -= imp * ny * bMult;
+
+  const hit = Math.abs(imp);
+  a.speed *= Math.max(0.35, 1 - hit * 0.12);
+  b.speed *= Math.max(0.35, 1 - hit * 0.12);
+  return hit;
+}
+
+function resolveAllCollisions() {
+  // AI vs AI — one car (the "mover") drives off quickly, the other (the "stopper") pauses
+  for (let i = 0; i < AI_CARS.length; i++) {
+    for (let j = i + 1; j < AI_CARS.length; j++) {
+      const a = AI_CARS[i], b = AI_CARS[j];
+      if (Math.abs(a.x-b.x) > 60 || Math.abs(a.y-b.y) > 60) continue;
+      const strength = resolveCollision(a, b, 1, 1);
+      if (strength > 0.05) {
+        // Randomly decide which one gets away fast and which one waits
+        const [mover, stopper] = Math.random() < 0.5 ? [a, b] : [b, a];
+        mover.bumpedTimer  = 0.05 + Math.random() * 0.1;  // drives off almost instantly
+        stopper.bumpedTimer = 1.2 + Math.random() * 0.8;  // sits for a moment
+        spawnSparks((a.x+b.x)/2, (a.y+b.y)/2, Math.max(6, Math.floor(strength * 10)));
+      }
+    }
+  }
+  // Player vs AI
+  for (let i = AI_CARS.length - 1; i >= 0; i--) {
+    const ac = AI_CARS[i];
+    if (Math.abs(car.x-ac.x) > 60 || Math.abs(car.y-ac.y) > 60) continue;
+    const strength = resolveCollision(car, ac, 0.8, 1.4);
+    if (strength > 0.05) {
+      // Full-speed hit — big explosion, remove the car
+      if (Math.abs(car.speed) >= car.maxSpeed * 0.75) {
+        spawnExplosion(ac.x, ac.y);
+        spawnSparks(ac.x, ac.y, 20);
+        AI_CARS.splice(i, 1);
+        car.speed *= 0.45;
+        statExp++;
+        bumpStat('stat-exp', statExp);
+      } else {
+        ac.bumpedTimer = 0.9;
+        spawnSparks((car.x+ac.x)/2, (car.y+ac.y)/2, Math.max(8, Math.min(30, Math.floor(strength * 8))));
+      }
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   ░░  RAILWAY  ░░
+   ═══════════════════════════════════════════════════ */
+const TRACK_CP = [
+  { x: 3400, y: 1100 },
+  { x: 2600, y: 1350 },
+  { x: 1800, y: 900  },
+  { x: 1000, y: 1150 },
+  { x: 200,  y: 950  },
+  { x: -400, y: 1050 },
+];
+
+const TRACK_PTS   = [];
+const TRACK_DISTS = [];
+let   TRACK_LENGTH = 0;
+
+(function buildTrack() {
+  function cr(p0, p1, p2, p3, t) {
+    const t2 = t*t, t3 = t2*t;
+    return {
+      x: 0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+      y: 0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3),
+    };
+  }
+  const cp = TRACK_CP;
+  const ext = [
+    { x: cp[0].x*2-cp[1].x, y: cp[0].y*2-cp[1].y },
+    ...cp,
+    { x: cp[cp.length-1].x*2-cp[cp.length-2].x, y: cp[cp.length-1].y*2-cp[cp.length-2].y },
+  ];
+  TRACK_PTS.push({ ...ext[1] });
+  TRACK_DISTS.push(0);
+  let cum = 0;
+  for (let seg = 0; seg < cp.length-1; seg++) {
+    const [p0,p1,p2,p3] = [ext[seg],ext[seg+1],ext[seg+2],ext[seg+3]];
+    for (let i = 1; i <= 220; i++) {
+      const pt = cr(p0,p1,p2,p3, i/220);
+      const prev = TRACK_PTS[TRACK_PTS.length-1];
+      cum += Math.hypot(pt.x-prev.x, pt.y-prev.y);
+      TRACK_PTS.push(pt);
+      TRACK_DISTS.push(cum);
+    }
+  }
+  TRACK_LENGTH = cum;
+})();
+
+function trackAt(d) {
+  if (d <= 0) return { ...TRACK_PTS[0], angle: Math.atan2(TRACK_PTS[1].y-TRACK_PTS[0].y, TRACK_PTS[1].x-TRACK_PTS[0].x) };
+  if (d >= TRACK_LENGTH) {
+    const n = TRACK_PTS.length;
+    return { ...TRACK_PTS[n-1], angle: Math.atan2(TRACK_PTS[n-1].y-TRACK_PTS[n-2].y, TRACK_PTS[n-1].x-TRACK_PTS[n-2].x) };
+  }
+  let lo = 0, hi = TRACK_DISTS.length-1;
+  while (hi-lo > 1) { const mid=(lo+hi)>>1; if (TRACK_DISTS[mid]<d) lo=mid; else hi=mid; }
+  const t = (d-TRACK_DISTS[lo]) / (TRACK_DISTS[hi]-TRACK_DISTS[lo]+0.001);
+  const p = TRACK_PTS[lo], q = TRACK_PTS[hi];
+  return { x: p.x+(q.x-p.x)*t, y: p.y+(q.y-p.y)*t, angle: Math.atan2(q.y-p.y, q.x-p.x) };
+}
+
+const TRAIN_SPEED    = 9;
+const TRAIN_N_CARS   = 8;
+const TRAIN_SPACING  = 62;
+const TRAIN_HIT_R    = 32;
+const TRAIN_ENTER    = -TRAIN_N_CARS * TRAIN_SPACING - 80;
+
+let trainActive   = false;
+let trainTimer    = 20;
+let trainHead     = TRAIN_ENTER;
+let trainWarnTime = 0;
+let deathTimer    = 0;  // counts down after player is hit by train
+
+function resetPlayer() {
+  car.x = 1150; car.y = 1150;
+  car.angle = -Math.PI / 2;
+  car.speed = 0; car.vx = 0; car.vy = 0;
+  car.targetX = null; car.targetY = null;
+  statExp = 0;
+  bumpStat('stat-exp', 0);
+  deathTimer = 0;
+  document.getElementById('death-screen').style.display = 'none';
+}
+
+function updateTrain(dt) {
+  trainTimer -= dt;
+
+  // Warning flash for 3s before train arrives
+  if (trainTimer < 3 && !trainActive) trainWarnTime += dt;
+  else if (trainActive) trainWarnTime = 0;
+
+  if (trainTimer <= 0 && !trainActive) {
+    trainActive = true;
+    trainHead   = TRAIN_ENTER;
+  }
+
+  if (!trainActive) return;
+
+  trainHead += TRAIN_SPEED;
+
+  // Collision check every car segment
+  for (let c = 0; c < TRAIN_N_CARS; c++) {
+    const d = trainHead - c * TRAIN_SPACING;
+    if (d < 0 || d > TRACK_LENGTH) continue;
+    const pos = trackAt(d);
+
+    // AI cars
+    for (let i = AI_CARS.length-1; i >= 0; i--) {
+      const ac = AI_CARS[i];
+      if (Math.hypot(ac.x-pos.x, ac.y-pos.y) < TRAIN_HIT_R + 14) {
+        spawnExplosion(ac.x, ac.y);
+        spawnSparks(ac.x, ac.y, 10);
+        AI_CARS.splice(i, 1);
+      }
+    }
+
+    // Player
+    if (deathTimer <= 0 && Math.hypot(car.x-pos.x, car.y-pos.y) < TRAIN_HIT_R + 18) {
+      spawnExplosion(car.x, car.y);
+      deathTimer = 3.0;
+      document.getElementById('death-screen').style.display = 'flex';
+    }
+  }
+
+  // Despawn when fully off the far end
+  if (trainHead > TRACK_LENGTH + TRAIN_N_CARS * TRAIN_SPACING + 100) {
+    trainActive  = false;
+    trainTimer   = 28 + Math.random() * 22;
+    trainWarnTime = 0;
+  }
+
+  // Death countdown
+  if (deathTimer > 0) {
+    deathTimer -= dt;
+    if (deathTimer <= 0) resetPlayer();
+  }
+}
+
+function drawTrack() {
+  const RAIL_GAP    = 18;  // half-distance between rails
+  const SLEEPER_INT = 18;  // px between sleepers along track
+  const pts = TRACK_PTS;
+  const n   = pts.length;
+
+  // ── Ballast bed (semi-transparent so roads show through at crossings) ──
+  ctx.globalAlpha = 0.82;
+  ctx.lineWidth   = 54;
+  ctx.strokeStyle = '#5A4E3A';
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const sx = pts[i].x - cam.x, sy = pts[i].y - cam.y;
+    if (sx < -80 || sx > CW+80 || sy < -80 || sy > CH+80) { if (i>0) { ctx.stroke(); ctx.beginPath(); } continue; }
+    i === 0 ? ctx.moveTo(sx, sy) : ctx.lineTo(sx, sy);
+  }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // ── Sleepers ──
+  let distAcc = 0;
+  let nextSleeper = 0;
+  for (let i = 1; i < n; i++) {
+    const prev = pts[i-1], cur = pts[i];
+    const segLen = Math.hypot(cur.x-prev.x, cur.y-prev.y);
+    distAcc += segLen;
+    if (distAcc >= nextSleeper) {
+      nextSleeper = distAcc + SLEEPER_INT;
+      const sx = cur.x - cam.x, sy = cur.y - cam.y;
+      if (sx < -60 && sx > CW+60 && sy < -60 && sy > CH+60) continue;
+      const ang = Math.atan2(cur.y-prev.y, cur.x-prev.x);
+      const nx = Math.sin(ang)*24, ny = -Math.cos(ang)*24;
+      ctx.strokeStyle = '#3D2B1A';
+      ctx.lineWidth   = 6;
+      ctx.lineCap     = 'square';
+      ctx.beginPath();
+      ctx.moveTo(sx-nx, sy-ny);
+      ctx.lineTo(sx+nx, sy+ny);
+      ctx.stroke();
+    }
+  }
+
+  // ── Rails ──
+  for (const side of [-1, 1]) {
+    ctx.strokeStyle = '#AAAAAA';
+    ctx.lineWidth   = 3.5;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < n; i++) {
+      const cur = pts[i];
+      const ang = i < n-1
+        ? Math.atan2(pts[i+1].y-cur.y, pts[i+1].x-cur.x)
+        : Math.atan2(cur.y-pts[i-1].y, cur.x-pts[i-1].x);
+      const rx = cur.x + Math.sin(ang)*RAIL_GAP*side - cam.x;
+      const ry = cur.y - Math.cos(ang)*RAIL_GAP*side - cam.y;
+      if (!started) { ctx.moveTo(rx, ry); started=true; }
+      else ctx.lineTo(rx, ry);
+    }
+    ctx.stroke();
+  }
+}
+
+function drawTrain() {
+  if (!trainActive && trainWarnTime <= 0) return;
+
+  // ── Warning banner ──
+  if (trainWarnTime > 0 && !trainActive) {
+    const flash = Math.sin(trainWarnTime * 18) > 0;
+    if (flash) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(220,30,30,0.88)';
+      ctx.fillRect(0, CH/2 - 32, CW, 64);
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px "Press Start 2P", monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('⚠  TRAIN COMING  ⚠', CW/2, CH/2);
+      ctx.restore();
+    }
+  }
+
+  if (!trainActive) return;
+
+  for (let c = 0; c < TRAIN_N_CARS; c++) {
+    const d = trainHead - c * TRAIN_SPACING;
+    const pos = trackAt(d);
+    const sx = pos.x - cam.x, sy = pos.y - cam.y;
+    if (sx < -120 || sx > CW+120 || sy < -120 || sy > CH+120) continue;
+
+    const isEngine = c === 0;
+    const w = isEngine ? 36 : 30;
+    const h = isEngine ? 68 : 58;
+
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(pos.angle + Math.PI/2);
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.save(); ctx.translate(6,8);
+    ctx.beginPath(); ctx.roundRect(-w/2,-h/2,w,h,4); ctx.fill();
+    ctx.restore();
+
+    // Body
+    ctx.fillStyle = isEngine ? '#1A1A2E' : (c%2===0 ? '#8B1A1A' : '#1A3A6B');
+    ctx.beginPath(); ctx.roundRect(-w/2,-h/2,w,h,4); ctx.fill();
+
+    // Stripe
+    ctx.fillStyle = isEngine ? '#E8C840' : 'rgba(255,255,255,0.15)';
+    ctx.fillRect(-w/2, -h/2+8, w, 6);
+
+    // Windows
+    if (!isEngine) {
+      ctx.fillStyle = 'rgba(180,220,255,0.55)';
+      for (let wi = 0; wi < 3; wi++)
+        ctx.fillRect(-w/2+5, -h/2+22+wi*14, w-10, 9);
+    }
+
+    // Engine cab
+    if (isEngine) {
+      ctx.fillStyle = '#2A2A50';
+      ctx.beginPath(); ctx.roundRect(-w/2+3,-h/2+14,w-6,26,3); ctx.fill();
+      ctx.fillStyle = 'rgba(180,220,255,0.6)';
+      ctx.fillRect(-w/2+6,-h/2+17,w-12,10);
+
+      // Headlight
+      ctx.fillStyle = `rgba(255,255,180,${0.7+Math.sin(T*4)*0.3})`;
+      ctx.beginPath(); ctx.arc(0,-h/2-4,7,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = `rgba(255,255,160,${0.15+Math.sin(T*4)*0.08})`;
+      ctx.beginPath(); ctx.arc(0,-h/2-4,22,0,Math.PI*2); ctx.fill();
+
+      // Chimney smoke puffs
+      if (Math.random()<0.18) spawnSmoke(pos.x,pos.y,pos.angle,TRAIN_SPEED*0.4);
+    }
+
+    // Wheels (visible as small dark rectangles at corners)
+    ctx.fillStyle = '#111';
+    [[-w/2-3,-h/2+4],[w/2-1,-h/2+4],[-w/2-3,h/2-12],[w/2-1,h/2-12]]
+      .forEach(([rx,ry])=>{ ctx.beginPath();ctx.roundRect(rx,ry,5,8,1);ctx.fill(); });
+
+    // Coupling connector
+    ctx.fillStyle = '#555';
+    ctx.fillRect(-2, h/2, 4, 6);
+
+    ctx.restore();
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   ░░  UPDATE  ░░
+   ═══════════════════════════════════════════════════ */
+let T = 0;
+
+function update(dt) {
+  T += dt;
+
+  const up    = K.has('ArrowUp')    || K.has('KeyW');
+  const down  = K.has('ArrowDown')  || K.has('KeyS');
+  const left  = K.has('ArrowLeft')  || K.has('KeyA');
+  const right = K.has('ArrowRight') || K.has('KeyD');
+  const anyKey = up || down || left || right || swipe.active;
+
+  // Freeze all player input while dead
+  if (deathTimer > 0) {
+    TRAFFIC_LIGHTS.forEach(tl => tl.t += dt);
+    AI_CARS.forEach(ac => updateAICar(ac, dt));
+    resolveAllCollisions();
+    updateTrain(dt);
+    for (let i = sparks.length-1; i>=0; i--) { const s=sparks[i]; s.x+=s.vx; s.y+=s.vy; s.vx*=.9; s.vy*=.9; s.life-=dt*2.8; if(s.life<=0) sparks.splice(i,1); }
+    for (let i = explosions.length-1; i>=0; i--) { const e=explosions[i]; e.x+=e.vx; e.y+=e.vy; e.vx*=e.type==='smoke'?.94:.88; e.vy*=e.type==='smoke'?.94:.88; e.life-=dt*(e.type==='smoke'?.9:1.6); if(e.life<=0) explosions.splice(i,1); }
+    document.getElementById('spd').textContent = '0.0';
+    return;
+  }
+
+  // Swipe: steer car directly toward swipe angle and drive
+  if (swipe.active) {
+    car.targetX = car.targetY = null;
+    let diff = swipe.angle - car.angle;
+    while (diff >  Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    car.angle += diff * 0.18;
+    const throttle = Math.min(swipe.mag / 80, 1);
+    car.speed = Math.min(car.speed + car.accel * 3.5, car.maxSpeed * Math.max(throttle, 0.5));
+  }
+
+  // Click-to-move
+  if (car.targetX !== null && !anyKey) {
+    const dx = car.targetX - car.x;
+    const dy = car.targetY - car.y;
+    const d  = Math.hypot(dx, dy);
+    if (d < 24) {
+      car.targetX = car.targetY = null;
+      car.speed *= 0.55;
+    } else {
+      const ta = Math.atan2(dy, dx);
+      let diff = ta - car.angle;
+      while (diff >  Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      const amt = car.turn * Math.min(1, Math.abs(car.speed) * .32 + .54);
+      car.angle += Math.sign(diff) * Math.min(Math.abs(diff), amt);
+      car.speed = Math.min(car.speed + car.accel, car.maxSpeed * .76);
+    }
+  } else if (anyKey) {
+    car.targetX = car.targetY = null;
+  }
+
+  // Keyboard
+  if (up)   car.speed += car.accel;
+  if (down) car.speed -= car.speed > .12 ? car.brake : car.accel * .42;
+  if ((left || right) && Math.abs(car.speed) > .15) {
+    const f = Math.min(Math.abs(car.speed) / car.maxSpeed, 1);
+    car.angle += (right ? 1 : -1) * car.turn * f * Math.sign(car.speed);
+  }
+
+  // Physics
+  if (!up && !down && !swipe.active && car.targetX === null) car.speed *= car.friction;
+  if (Math.abs(car.speed) < .04) car.speed = 0;
+  car.speed = Math.max(-car.maxSpeed * .42, Math.min(car.maxSpeed, car.speed));
+
+  car.x += Math.cos(car.angle) * car.speed + car.vx;
+  car.y += Math.sin(car.angle) * car.speed + car.vy;
+  car.vx *= 0.80;
+  car.vy *= 0.80;
+  car.x = Math.max(12, Math.min(WW - 12, car.x));
+  car.y = Math.max(12, Math.min(WH - 12, car.y));
+
+  if (Math.abs(car.speed) > 1.6) spawnSmoke(car.x, car.y, car.angle, Math.abs(car.speed));
+
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= .97; p.vy *= .97;
+    p.life -= dt * 1.9;
+    if (p.life <= 0) parts.splice(i, 1);
+  }
+
+  // Camera
+  const la = 68 * (car.speed >= 0 ? 1 : -1);
+  const tx = car.x + Math.cos(car.angle) * la - CW / 2;
+  const ty = car.y + Math.sin(car.angle) * la - CH / 2;
+  cam.x += (tx - cam.x) * .09;
+  cam.y += (ty - cam.y) * .09;
+  cam.x = Math.max(0, Math.min(WW - CW, cam.x));
+  cam.y = Math.max(0, Math.min(WH - CH, cam.y));
+
+  // Zone detection
+  let hit = null;
+  for (const z of ZONES)
+    if (car.x > z.x && car.x < z.x+z.w && car.y > z.y && car.y < z.y+z.h) { hit = z; break; }
+  if (hit !== activeZone) { activeZone = hit; setPopup(hit); }
+
+  // Tick traffic lights
+  TRAFFIC_LIGHTS.forEach(tl => tl.t += dt);
+  // Update AI cars
+  AI_CARS.forEach(ac => updateAICar(ac, dt));
+  // Resolve collisions between all cars
+  resolveAllCollisions();
+  // Train
+  updateTrain(dt);
+
+  // Update sparks
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const s = sparks[i];
+    s.x += s.vx; s.y += s.vy;
+    s.vx *= 0.90; s.vy *= 0.90;
+    s.life -= dt * 2.8;
+    if (s.life <= 0) sparks.splice(i, 1);
+  }
+
+  // Update explosions
+  for (let i = explosions.length - 1; i >= 0; i--) {
+    const e = explosions[i];
+    e.x += e.vx; e.y += e.vy;
+    e.vx *= e.type === 'smoke' ? 0.94 : 0.88;
+    e.vy *= e.type === 'smoke' ? 0.94 : 0.88;
+    e.life -= dt * (e.type === 'smoke' ? 0.9 : 1.6);
+    if (e.life <= 0) explosions.splice(i, 1);
+  }
+
+  document.getElementById('spd').textContent = Math.abs(car.speed).toFixed(1);
+}
+
+/* ═══════════════════════════════════════════════════
+   ░░  RENDER  ░░
+   ═══════════════════════════════════════════════════ */
+function drawGrass() {
+  const ox = Math.floor(cam.x / TILE) * TILE;
+  const oy = Math.floor(cam.y / TILE) * TILE;
+  for (let gx = ox; gx < cam.x + CW + TILE; gx += TILE)
+    for (let gy = oy; gy < cam.y + CH + TILE; gy += TILE) {
+      const ev = (Math.floor(gx/TILE) + Math.floor(gy/TILE)) % 2 === 0;
+      ctx.fillStyle = ev ? '#4A7928' : '#52812E';
+      ctx.fillRect(gx - cam.x, gy - cam.y, TILE, TILE);
+    }
+}
+
+function drawRoads() {
+  for (const r of H_ROADS) {
+    ctx.fillStyle = '#383838';
+    ctx.fillRect(-cam.x, r.y - cam.y, WW, r.h);
+    ctx.fillStyle = '#505050';
+    ctx.fillRect(-cam.x, r.y - cam.y, WW, 3);
+    ctx.fillRect(-cam.x, r.y + r.h - 3 - cam.y, WW, 3);
+  }
+  for (const r of V_ROADS) {
+    ctx.fillStyle = '#383838';
+    ctx.fillRect(r.x - cam.x, -cam.y, r.w, WH);
+    ctx.fillStyle = '#505050';
+    ctx.fillRect(r.x - cam.x, -cam.y, 3, WH);
+    ctx.fillRect(r.x + r.w - 3 - cam.x, -cam.y, 3, WH);
+  }
+
+  // Intersection boxes (slight darkening)
+  ctx.fillStyle = 'rgba(0,0,0,0.12)';
+  for (const b of STOP_BOXES)
+    ctx.fillRect(b.x - cam.x, b.y - cam.y, b.w, b.h);
+
+  // Dashed centre lines
+  ctx.setLineDash([26, 18]);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#FFCC00';
+  for (const r of H_ROADS) {
+    const my = r.y + r.h / 2;
+    ctx.beginPath(); ctx.moveTo(-cam.x, my - cam.y); ctx.lineTo(WW - cam.x, my - cam.y); ctx.stroke();
+  }
+  for (const r of V_ROADS) {
+    const mx = r.x + r.w / 2;
+    ctx.beginPath(); ctx.moveTo(mx - cam.x, -cam.y); ctx.lineTo(mx - cam.x, WH - cam.y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // World border
+  ctx.strokeStyle = '#1C1C1C';
+  ctx.lineWidth = 24;
+  ctx.strokeRect(0 - cam.x + 12, 0 - cam.y + 12, WW - 24, WH - 24);
+}
+
+function drawTrafficLights() {
+  const HS = 7; // housing half-width
+
+  TRAFFIC_LIGHTS.forEach(tl => {
+    const vr = V_ROADS[tl.vi], hr = H_ROADS[tl.hi];
+    const { h: hs, v: vs } = tlState(tl);
+
+    // 4 corner posts: NW=H-state, NE=V-state, SW=V-state, SE=H-state
+    const posts = [
+      { wx: vr.x,       wy: hr.y,       state: hs },
+      { wx: vr.x+vr.w,  wy: hr.y,       state: vs },
+      { wx: vr.x,       wy: hr.y+hr.h,  state: vs },
+      { wx: vr.x+vr.w,  wy: hr.y+hr.h,  state: hs },
+    ];
+
+    posts.forEach(({ wx, wy, state }) => {
+      const sx = wx - cam.x, sy = wy - cam.y;
+      if (sx < -50 || sx > CW+50 || sy < -50 || sy > CH+50) return;
+
+      // Pole
+      ctx.fillStyle = '#2a2a2a';
+      ctx.fillRect(sx - 1.5, sy - 16, 3, 16);
+
+      // Housing (dark box)
+      ctx.fillStyle = '#181818';
+      ctx.beginPath(); ctx.roundRect(sx - HS, sy - 29, HS*2, HS*3.6, 2); ctx.fill();
+      ctx.strokeStyle = '#404040'; ctx.lineWidth = 1;
+      ctx.strokeRect(sx - HS, sy - 29, HS*2, HS*3.6);
+
+      // Red bulb
+      const redOn = state === 'red';
+      ctx.fillStyle = redOn ? '#FF2828' : 'rgba(90,5,5,0.7)';
+      ctx.beginPath(); ctx.arc(sx, sy - 23, HS * 0.55, 0, Math.PI*2); ctx.fill();
+      if (redOn) {
+        ctx.fillStyle = 'rgba(255,80,80,0.22)';
+        ctx.beginPath(); ctx.arc(sx, sy - 23, HS * 1.1, 0, Math.PI*2); ctx.fill();
+      }
+
+      // Yellow bulb
+      const yelOn = state === 'yellow';
+      ctx.fillStyle = yelOn ? '#FFD700' : 'rgba(60,50,0,0.7)';
+      ctx.beginPath(); ctx.arc(sx, sy - 15, HS * 0.55, 0, Math.PI*2); ctx.fill();
+      if (yelOn) {
+        ctx.fillStyle = 'rgba(255,220,60,0.2)';
+        ctx.beginPath(); ctx.arc(sx, sy - 15, HS * 1.0, 0, Math.PI*2); ctx.fill();
+      }
+
+      // Green bulb
+      const grnOn = state === 'green';
+      ctx.fillStyle = grnOn ? '#00DD55' : 'rgba(0,45,10,0.7)';
+      ctx.beginPath(); ctx.arc(sx, sy - 7,  HS * 0.55, 0, Math.PI*2); ctx.fill();
+      if (grnOn) {
+        ctx.fillStyle = 'rgba(80,255,130,0.22)';
+        ctx.beginPath(); ctx.arc(sx, sy - 7, HS * 1.1, 0, Math.PI*2); ctx.fill();
+      }
+    });
+  });
+}
+
+function drawAICars() {
+  AI_CARS.forEach(ac => {
+    const sx = ac.x - cam.x, sy = ac.y - cam.y;
+    if (sx < -80 || sx > CW+80 || sy < -80 || sy > CH+80) return;
+
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(ac.angle + Math.PI / 2);
+
+    const w = ac.w, h = ac.h;
+
+    // Shadow
+    ctx.save(); ctx.translate(4, 5);
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath(); ctx.roundRect(-w/2, -h/2, w, h, 5); ctx.fill();
+    ctx.restore();
+
+    // Wheels
+    ctx.fillStyle = '#111';
+    const ww = 6, wh = 10;
+    [[-w/2-ww+2,-h/2],[w/2-2,-h/2],[-w/2-ww+2,h/2-wh],[w/2-2,h/2-wh]]
+      .forEach(([x,y]) => { ctx.beginPath(); ctx.roundRect(x,y,ww,wh,2); ctx.fill(); });
+
+    // Body
+    ctx.fillStyle = ac.body;
+    ctx.beginPath(); ctx.roundRect(-w/2,-h/2,w,h,5); ctx.fill();
+
+    // Shine
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath(); ctx.roundRect(-w/2+2,-h/2+2,w/2-2,h-4,3); ctx.fill();
+
+    // Cabin
+    const cw = w*.74, ch = h*.36, cy = -h/2 + h*.12;
+    ctx.fillStyle = ac.cabin;
+    ctx.beginPath(); ctx.roundRect(-cw/2,cy,cw,ch,3); ctx.fill();
+
+    // Windshield
+    ctx.fillStyle = 'rgba(150,215,255,0.65)';
+    ctx.beginPath(); ctx.roundRect(-cw/2+2,cy+2,cw-4,ch*.48,2); ctx.fill();
+
+    // Headlights
+    ctx.fillStyle = '#FFFCCC';
+    ctx.fillRect(-w/2+3,-h/2+1,4,3);
+    ctx.fillRect(w/2-7,-h/2+1,4,3);
+
+    // Taillights
+    ctx.fillStyle = '#FF1010';
+    ctx.fillRect(-w/2+3,h/2-4,4,3);
+    ctx.fillRect(w/2-7,h/2-4,4,3);
+
+    ctx.restore();
+  });
+}
+
+
+function drawTrees() {
+  TREES.forEach(tr => {
+    const sx = tr.x - cam.x, sy = tr.y - cam.y;
+    if (sx < -80 || sx > CW+80 || sy < -80 || sy > CH+80) return;
+    const sw = Math.sin(T * .68 + tr.ph) * 1.9;
+
+    ctx.fillStyle = 'rgba(0,0,0,.09)';
+    ctx.beginPath(); ctx.ellipse(sx+5, sy+5, tr.r*.88, tr.r*.54, 0, 0, Math.PI*2); ctx.fill();
+
+    ctx.fillStyle = '#5B3218';
+    ctx.fillRect(sx - 3 + sw*.11, sy - 4, 6, 11);
+
+    ctx.fillStyle = tr.d;
+    ctx.beginPath(); ctx.arc(sx + sw, sy - tr.r*.22, tr.r, 0, Math.PI*2); ctx.fill();
+
+    ctx.fillStyle = tr.m;
+    ctx.beginPath(); ctx.arc(sx + sw - 4, sy - tr.r*.32, tr.r*.7, 0, Math.PI*2); ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,255,255,.04)';
+    ctx.beginPath(); ctx.arc(sx + sw - 3, sy - tr.r*.42, tr.r*.38, 0, Math.PI*2); ctx.fill();
+  });
+}
+
+function drawZones() {
+  ZONES.forEach(z => {
+    const sx = z.x - cam.x, sy = z.y - cam.y;
+    if (sx > CW+60 || sx+z.w < -60 || sy > CH+60 || sy+z.h < -60) return;
+
+    const pls = Math.sin(T * 2.4) * .5 + .5;
+    const act = z === activeZone;
+    const bH  = z.h * .72; // building height
+
+    // Drop shadow
+    ctx.fillStyle = 'rgba(0,0,0,.32)';
+    ctx.fillRect(sx+9, sy+9, z.w, bH);
+
+    // Building fill
+    ctx.fillStyle = z.color + '26';
+    ctx.fillRect(sx, sy, z.w, bH);
+    ctx.fillStyle = z.color + '72';
+    ctx.fillRect(sx, sy, z.w, bH);
+
+    // Building outline
+    ctx.strokeStyle = z.color;
+    ctx.lineWidth = act ? 4 : 2;
+    ctx.setLineDash([]);
+    ctx.strokeRect(sx, sy, z.w, bH);
+
+    // Roof stripe
+    ctx.fillStyle = z.color;
+    ctx.fillRect(sx, sy, z.w, 20);
+
+    // Roof glow trim
+    ctx.fillStyle = 'rgba(255,255,255,.12)';
+    ctx.fillRect(sx, sy, z.w, 3);
+
+    // Active glow
+    if (act) {
+      ctx.strokeStyle = z.color;
+      ctx.lineWidth = 9 * pls;
+      ctx.globalAlpha = pls * .32;
+      ctx.strokeRect(sx - 8, sy - 8, z.w + 16, bH + 16);
+      ctx.globalAlpha = 1;
+    }
+
+    // Window lights
+    for (let wx = 0; wx < 3; wx++) {
+      const winX = sx + 22 + wx * 76;
+      const winY = sy + 32;
+      ctx.fillStyle = act
+        ? `rgba(255,255,200,${.55 + Math.sin(T*3 + wx) * .2})`
+        : 'rgba(255,255,200,.32)';
+      ctx.fillRect(winX, winY, 44, 28);
+      ctx.strokeStyle = z.color + 'AA';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(winX, winY, 44, 28);
+    }
+
+    // Icon
+    ctx.font = '36px serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(z.icon, sx + z.w/2, sy + bH * .52 - 4);
+
+    // Label
+    ctx.fillStyle = '#fff';
+    ctx.font = '7px "Press Start 2P", monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const words = z.label.split(' ');
+    if (words.length <= 2) {
+      ctx.fillText(z.label, sx + z.w/2, sy + bH * .52 + 28);
+    } else {
+      ctx.fillText(words.slice(0,2).join(' '), sx + z.w/2, sy + bH * .52 + 22);
+      ctx.fillText(words.slice(2).join(' '),   sx + z.w/2, sy + bH * .52 + 34);
+    }
+  });
+}
+
+function drawSmoke() {
+  parts.forEach(p => {
+    const sx = p.x - cam.x, sy = p.y - cam.y;
+    ctx.globalAlpha = p.life * .52;
+    ctx.fillStyle = '#909090';
+    ctx.beginPath(); ctx.arc(sx, sy, p.r * (1 + (1 - p.life) * .45), 0, Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawSparks() {
+  sparks.forEach(s => {
+    const sx = s.x - cam.x, sy = s.y - cam.y;
+    ctx.globalAlpha = s.life * 0.95;
+    ctx.fillStyle = s.life > 0.5 ? '#FFE044' : '#FF7700';
+    ctx.beginPath(); ctx.arc(sx, sy, 2.5 * s.life, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawExplosions() {
+  explosions.forEach(e => {
+    const sx = e.x - cam.x, sy = e.y - cam.y;
+    ctx.globalAlpha = e.life * (e.type === 'smoke' ? 0.55 : 0.92);
+    if (e.type === 'fire') {
+      // Hot white core fading to orange/red
+      const t = 1 - e.life;
+      const r = Math.floor(255);
+      const g = Math.floor(Math.max(0, 200 - t * 200));
+      const b = 0;
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      const radius = e.r * (1 + (1 - e.life) * 1.2);
+      ctx.beginPath(); ctx.arc(sx, sy, radius, 0, Math.PI*2); ctx.fill();
+      // Bright inner core
+      ctx.globalAlpha = e.life * 0.6;
+      ctx.fillStyle = '#FFFDE0';
+      ctx.beginPath(); ctx.arc(sx, sy, radius * 0.45, 0, Math.PI*2); ctx.fill();
+    } else if (e.type === 'debris') {
+      ctx.fillStyle = e.life > 0.5 ? '#888' : '#444';
+      ctx.beginPath(); ctx.arc(sx, sy, e.r * e.life, 0, Math.PI*2); ctx.fill();
+    } else { // smoke
+      ctx.fillStyle = `rgb(60,60,60)`;
+      ctx.beginPath(); ctx.arc(sx, sy, e.r * (1 + (1 - e.life) * 0.8), 0, Math.PI*2); ctx.fill();
+    }
+  });
+  ctx.globalAlpha = 1;
+}
+
+
+function drawCar() {
+  const sx = car.x - cam.x, sy = car.y - cam.y;
+
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.rotate(car.angle + Math.PI / 2);
+
+  const w = car.w, h = car.h;
+
+  // Shadow
+  ctx.save();
+  ctx.translate(5, 6);
+  ctx.fillStyle = 'rgba(0,0,0,.2)';
+  ctx.beginPath(); ctx.roundRect(-w/2, -h/2, w, h, 6); ctx.fill();
+  ctx.restore();
+
+  // Wheels
+  ctx.fillStyle = '#111';
+  const ww = 7, wh = 12;
+  [[-w/2-ww+2, -h/2], [w/2-2, -h/2],
+   [-w/2-ww+2,  h/2-wh], [w/2-2, h/2-wh]]
+    .forEach(([x, y]) => { ctx.beginPath(); ctx.roundRect(x, y, ww, wh, 2); ctx.fill(); });
+
+  // Wheel shine
+  ctx.fillStyle = 'rgba(255,255,255,.08)';
+  [[-w/2-ww+2, -h/2], [w/2-2, -h/2],
+   [-w/2-ww+2,  h/2-wh], [w/2-2, h/2-wh]]
+    .forEach(([x, y]) => ctx.fillRect(x+1, y+1, ww-2, 4));
+
+  // Body
+  ctx.fillStyle = car.body;
+  ctx.beginPath(); ctx.roundRect(-w/2, -h/2, w, h, 6); ctx.fill();
+
+  // Body left shine
+  ctx.fillStyle = 'rgba(255,255,255,.09)';
+  ctx.beginPath(); ctx.roundRect(-w/2+2, -h/2+2, w/2-3, h-4, 4); ctx.fill();
+
+  // Cabin
+  const cw = w * .76, ch = h * .38, cy = -h/2 + h*.12;
+  ctx.fillStyle = car.cabin;
+  ctx.beginPath(); ctx.roundRect(-cw/2, cy, cw, ch, 4); ctx.fill();
+
+  // Windshield (front)
+  ctx.fillStyle = 'rgba(150,215,255,.72)';
+  ctx.beginPath(); ctx.roundRect(-cw/2+2, cy+2, cw-4, ch*.48, 3); ctx.fill();
+
+  // Windshield glare
+  ctx.fillStyle = 'rgba(255,255,255,.25)';
+  ctx.fillRect(-cw/2+4, cy+3, cw/3, 4);
+
+  // Rear window
+  ctx.fillStyle = 'rgba(150,215,255,.52)';
+  ctx.beginPath(); ctx.roundRect(-cw/2+2, cy+ch*.52, cw-4, ch*.44, 2); ctx.fill();
+
+  // Headlights
+  ctx.fillStyle = '#FFFCCC';
+  ctx.fillRect(-w/2+3, -h/2+1, 5, 4);
+  ctx.fillRect(w/2-8,  -h/2+1, 5, 4);
+
+  // Headlight glow
+  ctx.fillStyle = 'rgba(255,255,180,.35)';
+  ctx.beginPath(); ctx.arc(-w/2+5.5, -h/2-1, 6, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc( w/2-5.5, -h/2-1, 6, 0, Math.PI*2); ctx.fill();
+
+  // Taillights
+  ctx.fillStyle = '#FF1010';
+  ctx.fillRect(-w/2+3, h/2-5, 5, 4);
+  ctx.fillRect(w/2-8,  h/2-5, 5, 4);
+
+  // Centre detail line
+  ctx.fillStyle = 'rgba(0,0,0,.14)';
+  ctx.fillRect(-1, -h/2+4, 2, h-8);
+
+  ctx.restore();
+}
+
+function drawVignette() {
+  const vg = ctx.createRadialGradient(CW/2, CH/2, CW*.32, CW/2, CH/2, CW*.78);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(0,0,0,.48)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, CW, CH);
+}
+
+/* ── Starting Marker ── */
+let startDrawn = false;
+function drawStartMarker() {
+  // "YOU ARE HERE" arrow painted on road at start
+  const sx = 1150 - cam.x, sy = 1150 - cam.y;
+  ctx.save();
+  ctx.globalAlpha = .28;
+  ctx.fillStyle = '#FFD700';
+  ctx.font = '8px "Press Start 2P", monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('START', sx, sy + 60);
+  ctx.restore();
+}
+
+function drawMinimap() {
+  const mw = mmC.width, mh = mmC.height;
+  const scX = WW / mw, scY = WH / mh;
+
+  mmCtx.fillStyle = '#304A18';
+  mmCtx.fillRect(0, 0, mw, mh);
+
+  H_ROADS.forEach(r => {
+    mmCtx.fillStyle = '#4A4A4A';
+    mmCtx.fillRect(0, r.y/scY, mw, Math.max(2, r.h/scY));
+  });
+  V_ROADS.forEach(r => {
+    mmCtx.fillStyle = '#4A4A4A';
+    mmCtx.fillRect(r.x/scX, 0, Math.max(2, r.w/scX), mh);
+  });
+
+  ZONES.forEach(z => {
+    mmCtx.fillStyle = z.color;
+    mmCtx.fillRect(z.x/scX, z.y/scY, Math.max(4, z.w/scX), Math.max(3, z.h/scY));
+  });
+
+  // Viewport rect (clamped)
+  const vx = Math.max(0, Math.min(mw-2, cam.x/scX));
+  const vy = Math.max(0, Math.min(mh-2, cam.y/scY));
+  const vw = Math.min(mw - vx, CW / scX);
+  const vh = Math.min(mh - vy, CH / scY);
+  mmCtx.strokeStyle = 'rgba(255,255,255,.3)';
+  mmCtx.lineWidth = 1;
+  mmCtx.strokeRect(vx, vy, vw, vh);
+
+  // Car
+  mmCtx.fillStyle = '#fff';
+  mmCtx.beginPath();
+  mmCtx.arc(Math.max(1, Math.min(mw-1, car.x/scX)), Math.max(1, Math.min(mh-1, car.y/scY)), 3.5, 0, Math.PI*2);
+  mmCtx.fill();
+}
+
+/* ═══════════════════════════════════════════════════
+   ░░  MAIN LOOP  ░░
+   ═══════════════════════════════════════════════════ */
+let lastTS = 0;
+function loop(ts) {
+  const dt = Math.min((ts - lastTS) / 1000, .05);
+  lastTS = ts;
+
+  update(dt);
+
+  ctx.clearRect(0, 0, CW, CH);
+  drawGrass();
+  drawRoads();
+  drawTrack();
+  drawTrafficLights();
+  drawStartMarker();
+  drawTrees();
+  drawZones();
+  drawAICars();
+  drawTrain();
+  drawSmoke();
+  drawSparks();
+  drawExplosions();
+  drawCar();
+  drawVignette();
+  drawMinimap();
+
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
